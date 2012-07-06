@@ -33,7 +33,7 @@ func Walk(conn *doozer.Conn, rev int64, entries chan Entry, errChan chan error) 
 				errChan <- fmt.Errorf("Error getting value for '%s': %s\n", path, err.Error())
 			}
 
-      entries <- Entry{Rev: info.Rev, Path: path, Value: val, IsSet: true}
+			entries <- Entry{Rev: info.Rev, Path: path, Value: val, IsSet: true}
 		}
 
 		return

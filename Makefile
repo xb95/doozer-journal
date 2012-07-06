@@ -14,3 +14,6 @@ build:
 	cd $(LOCAL_GOPATH)/src/$(PKG);\
 		GOPATH=$(LOCAL_GOPATH) go get -d ./...;\
 		GOPATH=$(LOCAL_GOPATH) go build -o doozer-journal ./cmd
+
+fmt:
+	go fmt ./...
