@@ -28,7 +28,7 @@ func runRestore(cmd *Command, args []string) {
 		os.Exit(1)
 	}
 
-	j := journal.NewJournal(f)
+	j := journal.New(f)
 
 	entries := make(chan journal.JournalEntry, 1024)
 	errChan := make(chan error)

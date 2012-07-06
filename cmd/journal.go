@@ -34,7 +34,7 @@ func runJournal(cmd *Command, args []string) {
 		os.Exit(1)
 	}
 
-	j := journal.NewJournal(f)
+	j := journal.New(f)
 
 	rev, err := cmd.Conn.Rev()
 	if err != nil {

@@ -30,8 +30,8 @@ type Journal struct {
 	opChan       chan JournalEntry
 }
 
-// NewJournal returns a Journal instance with sane sync defaults.
-func NewJournal(logfile *os.File) Journal {
+// New returns a Journal instance with sane sync defaults.
+func New(logfile *os.File) Journal {
 	return Journal{logfile, 100 * time.Second, 100, make(chan JournalEntry, 1024)}
 }
 
