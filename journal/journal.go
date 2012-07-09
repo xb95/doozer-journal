@@ -32,7 +32,7 @@ type Journal struct {
 
 // New returns a Journal instance with sane sync defaults.
 func New(logfile *os.File) Journal {
-	return Journal{logfile, 100 * time.Second, 100, make(chan JournalEntry, 1024)}
+	return Journal{logfile, 10 * time.Second, 100, make(chan JournalEntry, 1024)}
 }
 
 // Append writes a JournalEntry to the end of the journal log.
@@ -95,7 +95,7 @@ func (j Journal) Sync() (err error) {
 // SyncLoop schedules Sync calls based on the treshholds defined for SyncInterval &
 // SyncOps.
 func (j Journal) SyncLoop() {
-	timeout := time.After(j.SyncInterval)
+	tick := time.Tick(j.SyncInterval)
 	var opCounter int64 = 0
 
 	for {
@@ -111,10 +111,10 @@ func (j Journal) SyncLoop() {
 				j.Sync()
 				opCounter = 0
 			}
-		case <-timeout:
+		case <-tick:
+			println("sync after time!")
 			j.Sync()
 			opCounter = 0
-			timeout = time.After(j.SyncInterval)
 		}
 	}
 }
