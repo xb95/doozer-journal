@@ -29,7 +29,7 @@ func NewEntry(r int64, op Operation, p string, v []byte) (entry JournalEntry) {
 // NewEntryFromLog takes a log line in form of a string and constructs a JournalEntry
 // instance from it.
 func NewEntryFromLog(log string) (entry JournalEntry, err error) {
-	l := strings.Split(log, FIELD_SEPARATOR)
+	l := strings.SplitN(log, FIELD_SEPARATOR, 4)
 
 	rev, err := strconv.ParseInt(l[0], 10, 64)
 	if err != nil {
