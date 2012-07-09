@@ -55,8 +55,6 @@ func runJournal(cmd *Command, args []string) {
 		os.Exit(1)
 	}
 
-	go j.SyncLoop()
-
 	entries = make(chan coordinator.Entry, 1024)
 	errChan = make(chan error)
 

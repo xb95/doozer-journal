@@ -30,8 +30,12 @@ type Journal struct {
 }
 
 // New returns a Journal instance with sane sync defaults.
-func New(logfile *os.File) Journal {
-	return Journal{logfile, 10 * time.Second, 100, make(chan JournalEntry, 1024)}
+func New(logfile *os.File) (j Journal) {
+	j = Journal{logfile, 10 * time.Second, 100, make(chan JournalEntry, 1024)}
+
+	go j.syncLoop()
+
+	return
 }
 
 // Append writes a JournalEntry to the end of the journal log.
@@ -58,9 +62,9 @@ func (j Journal) Sync() (err error) {
 	return
 }
 
-// SyncLoop schedules Sync calls based on the treshholds defined for SyncInterval &
+// syncLoop schedules Sync calls based on the treshholds defined for SyncInterval &
 // SyncOps.
-func (j Journal) SyncLoop() {
+func (j Journal) syncLoop() {
 	tick := time.Tick(j.SyncInterval)
 	var opCounter int64 = 0
 
