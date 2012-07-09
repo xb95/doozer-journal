@@ -36,7 +36,12 @@ func NewEntryFromLog(log string) (entry JournalEntry, err error) {
 		return
 	}
 
-	entry = NewEntry(rev, NewOperation(l[1]), l[2], []byte(l[3]))
+	val, err := strconv.Unquote(l[3])
+	if err != nil {
+		return
+	}
+
+	entry = NewEntry(rev, NewOperation(l[1]), l[2], []byte(val))
 
 	return
 }
@@ -44,7 +49,7 @@ func NewEntryFromLog(log string) (entry JournalEntry, err error) {
 // ToLog returns the string representation of a JournalEntry in the journal log file.
 func (e JournalEntry) ToLog() string {
 	rev := strconv.FormatInt(e.Rev, 10)
-	val := string(e.Value)
+	val := strconv.Quote(string(e.Value))
 
 	return strings.Join([]string{rev, e.Op.String(), e.Path, val}, FIELD_SEPARATOR)
 }
