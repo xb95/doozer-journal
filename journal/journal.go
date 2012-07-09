@@ -8,7 +8,6 @@ package journal
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -49,39 +48,6 @@ func (j Journal) Append(entry JournalEntry) (err error) {
 	return
 }
 
-// Reads the Journal log file and emits every entry over the entries chan. All errors
-// are send to the errChan.
-func (j Journal) Read(entries chan JournalEntry, errChan chan error) {
-	reader := bufio.NewReader(j.File)
-
-	for {
-		line, err := reader.ReadString(byte(ENTRY_SEPARATOR))
-		if err == io.EOF {
-			errChan <- nil
-
-			close(entries)
-			break
-		}
-		if err != nil && err != io.EOF {
-			errChan <- err
-
-			close(entries)
-			break
-		}
-
-		cleanLine := strings.Trim(line, string(ENTRY_SEPARATOR))
-		entry, err := NewEntryFromLog(cleanLine)
-		if err != nil {
-			errChan <- err
-
-			close(entries)
-			break
-		}
-
-		entries <- entry
-	}
-}
-
 // Sync forces an fsync() on the journal log file.
 func (j Journal) Sync() (err error) {
 	err = j.File.Sync()
@@ -117,4 +83,26 @@ func (j Journal) SyncLoop() {
 			opCounter = 0
 		}
 	}
+}
+
+type EntryReader struct {
+	reader *bufio.Reader
+}
+
+func (j Journal) NewReader() (r *EntryReader) {
+	r = &EntryReader{reader: bufio.NewReader(j.File)}
+
+	return
+}
+
+func (r *EntryReader) ReadEntry() (entry JournalEntry, err error) {
+	line, err := r.reader.ReadString(byte(ENTRY_SEPARATOR))
+	if err != nil {
+		return
+	}
+
+	cleanLine := strings.Trim(line, string(ENTRY_SEPARATOR))
+	entry, err = NewEntryFromLog(cleanLine)
+
+	return
 }
