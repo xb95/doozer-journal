@@ -55,7 +55,7 @@ func (j Journal) Read(entries chan JournalEntry, errChan chan error) {
 	reader := bufio.NewReader(j.File)
 
 	for {
-		line, err := reader.ReadBytes(byte(ENTRY_SEPARATOR))
+		line, err := reader.ReadString(byte(ENTRY_SEPARATOR))
 		if err == io.EOF {
 			errChan <- nil
 
@@ -69,7 +69,7 @@ func (j Journal) Read(entries chan JournalEntry, errChan chan error) {
 			break
 		}
 
-		cleanLine := strings.Trim(string(line), string(ENTRY_SEPARATOR))
+		cleanLine := strings.Trim(line, string(ENTRY_SEPARATOR))
 		entry, err := NewEntryFromLog(cleanLine)
 		if err != nil {
 			errChan <- err
