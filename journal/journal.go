@@ -26,12 +26,12 @@ type Journal struct {
 	File         *os.File
 	SyncInterval time.Duration
 	SyncOps      int64
-	opChan       chan JournalEntry
+	opCounter    int64
 }
 
 // New returns a Journal instance with sane sync defaults.
 func New(logfile *os.File) (j Journal) {
-	j = Journal{logfile, 10 * time.Second, 100, make(chan JournalEntry, 1024)}
+	j = Journal{logfile, 10 * time.Second, 100, 0}
 
 	go j.syncLoop()
 
@@ -39,21 +39,24 @@ func New(logfile *os.File) (j Journal) {
 }
 
 // Append writes a JournalEntry to the end of the journal log.
-func (j Journal) Append(entry JournalEntry) (err error) {
+func (j *Journal) Append(entry JournalEntry) (err error) {
 	if !strings.HasPrefix(entry.Path, INTERNAL_PREFIX) {
 		_, err := j.File.Write([]byte(entry.ToLog() + string(ENTRY_SEPARATOR)))
 		if err != nil {
 			return fmt.Errorf("Unable to append '%s' to journal: %s", entry.ToLog(), err.Error())
 		}
 
-		j.opChan <- entry
+		if j.opCounter >= j.SyncOps {
+			j.Sync()
+			j.opCounter = 0
+		}
 	}
 
 	return
 }
 
 // Sync forces an fsync() on the journal log file.
-func (j Journal) Sync() (err error) {
+func (j *Journal) Sync() (err error) {
 	err = j.File.Sync()
 	if err != nil {
 		return fmt.Errorf("Unable to sync journal: %s", err.Error())
@@ -64,27 +67,13 @@ func (j Journal) Sync() (err error) {
 
 // syncLoop schedules Sync calls based on the treshholds defined for SyncInterval &
 // SyncOps.
-func (j Journal) syncLoop() {
+func (j *Journal) syncLoop() {
 	tick := time.Tick(j.SyncInterval)
-	var opCounter int64 = 0
 
-	for {
-		select {
-		case _, ok := <-j.opChan:
-			if !ok {
-				return
-			}
-
-			opCounter += 1
-
-			if opCounter >= j.SyncOps {
-				j.Sync()
-				opCounter = 0
-			}
-		case <-tick:
-			println("sync after time!")
+	for _ = range tick {
+		if j.opCounter > 0 {
 			j.Sync()
-			opCounter = 0
+			j.opCounter = 0
 		}
 	}
 }
