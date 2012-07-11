@@ -19,6 +19,7 @@ type Command struct {
 	Name      string
 	UsageLine string
 	Conn      *doozer.Conn
+	Rev       int64
 }
 
 func (cmd *Command) Usage() {
@@ -60,7 +61,14 @@ func main() {
 				os.Exit(1)
 			}
 
+			rev, err := cmd.Conn.Rev()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to get revision: %s\n", err.Error())
+				os.Exit(1)
+			}
+
 			cmd.Conn = conn
+			cmd.Rev = rev
 			cmd.Run(cmd, args)
 
 			return

@@ -36,16 +36,10 @@ func runSnapshot(cmd *Command, args []string) {
 
 	j := journal.New(f)
 
-	rev, err := cmd.Conn.Rev()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get revision: %s\n", err.Error())
-		os.Exit(1)
-	}
-
 	entries := make(chan coordinator.Entry, 1024)
 	errChan := make(chan error)
 
-	go coordinator.Walk(cmd.Conn, rev, entries, errChan)
+	go coordinator.Walk(cmd.Conn, cmd.Rev, entries, errChan)
 
 	for {
 		select {
