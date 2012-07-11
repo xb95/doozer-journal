@@ -71,7 +71,7 @@ func entryHandler(j journal.Journal, entries chan coordinator.Entry, errChan cha
 				return
 			}
 
-			var entry journal.JournalEntry
+			var entry *journal.JournalEntry
 			if e.IsSet {
 				entry = journal.NewEntry(e.Rev, journal.OpSet, e.Path, e.Value)
 			} else {
@@ -83,8 +83,12 @@ func entryHandler(j journal.Journal, entries chan coordinator.Entry, errChan cha
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				os.Exit(1)
 			}
+			b, err := journal.Marshal(entry)
+			if err != nil {
+				return
+			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", entry.ToLog())
+			fmt.Fprintf(os.Stdout, "%s\n", string(b))
 		case err := <-errChan:
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())

@@ -6,19 +6,35 @@
 package journal
 
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // INTERNAL_PREFIX is the path fragment which identifies paths used by doozerd
 // internally.
-const INTERNAL_PREFIX string = "/ctl"
+const INTERNAL_PREFIX = "/ctl"
 
-// ENTRY_SEPARATOR is the delimiter used to separate journal entries in the file.
-const ENTRY_SEPARATOR rune = '\n'
+// ENTRY_END marks the end of the logline representation of an entry.
+const ENTRY_END = "\n"
+
+// FIELD_SEPARATOR is the delimiter used to separate fields inside of an entry.
+const FIELD_SEPARATOR string = "|"
+
+// JournalEntry represents a journal log entry.
+type JournalEntry struct {
+	Rev   int64
+	Op    Operation
+	Path  string
+	Value []byte
+}
+
+// NewEntry returns a JournalEntry instance.
+func NewEntry(r int64, op Operation, p string, v []byte) (entry *JournalEntry) {
+	return &JournalEntry{Rev: r, Op: op, Path: p, Value: v}
+}
 
 // Journal represents an append-only log which accepts an either writable or readable
 // file.
@@ -39,11 +55,21 @@ func New(logfile *os.File) (j Journal) {
 }
 
 // Append writes a JournalEntry to the end of the journal log.
-func (j *Journal) Append(entry JournalEntry) (err error) {
+func (j *Journal) Append(entry *JournalEntry) (err error) {
 	if !strings.HasPrefix(entry.Path, INTERNAL_PREFIX) {
-		_, err := j.File.Write([]byte(entry.ToLog() + string(ENTRY_SEPARATOR)))
+		var payload []byte
+
+		payload, err = Marshal(entry)
 		if err != nil {
-			return fmt.Errorf("Unable to append '%s' to journal: %s", entry.ToLog(), err.Error())
+			return
+		}
+
+		length := fmt.Sprintf("%08d", len(payload))
+		line := length + " " + string(payload) + ENTRY_END
+
+		_, err := j.File.Write([]byte(line))
+		if err != nil {
+			return fmt.Errorf("Unable to append '%s' to journal: %s", string(payload), err.Error())
 		}
 
 		if j.opCounter >= j.SyncOps {
@@ -79,23 +105,89 @@ func (j *Journal) syncLoop() {
 }
 
 type EntryReader struct {
-	reader *bufio.Reader
+	file   *os.File
+	offset int64
 }
 
-func (j Journal) NewReader() (r *EntryReader) {
-	r = &EntryReader{reader: bufio.NewReader(j.File)}
+func (j *Journal) NewReader() (r *EntryReader) {
+	r = &EntryReader{file: j.File}
 
 	return
 }
 
-func (r *EntryReader) ReadEntry() (entry JournalEntry, err error) {
-	line, err := r.reader.ReadString(byte(ENTRY_SEPARATOR))
+func (r *EntryReader) ReadEntry() (entry *JournalEntry, err error) {
+	l := make([]byte, 8, 8)
+	n, err := r.file.ReadAt(l, r.offset)
 	if err != nil {
 		return
 	}
 
-	cleanLine := strings.Trim(line, string(ENTRY_SEPARATOR))
-	entry, err = NewEntryFromLog(cleanLine)
+	r.offset += int64(n)
+
+	space := make([]byte, 1, 1)
+	n, err = r.file.ReadAt(space, r.offset)
+	if err != nil {
+		return
+	}
+
+	if string(space) != " " {
+		return nil, fmt.Errorf("corrupted journal file: missing space")
+	}
+
+	r.offset += int64(n)
+
+	length, err := strconv.Atoi(string(l))
+	if err != nil {
+		return
+	}
+
+	payload := make([]byte, length, length)
+	n, err = r.file.ReadAt(payload, r.offset)
+	if err != nil {
+		return
+	}
+
+	r.offset += int64(n)
+
+	entry, err = Unmarshal(payload)
+	if err != nil {
+		return
+	}
+
+	end := make([]byte, len(ENTRY_END), len(ENTRY_END))
+	n, err = r.file.ReadAt(end, r.offset)
+	if err != nil {
+		return
+	}
+
+	r.offset += int64(n)
+
+	if string(end) != ENTRY_END {
+		return nil, fmt.Errorf("corrupted journal file: frame doesn't end with %s", ENTRY_END)
+	}
+
+	return
+}
+
+func Marshal(entry *JournalEntry) (payload []byte, err error) {
+	rev := strconv.FormatInt(entry.Rev, 10)
+	val := string(entry.Value)
+	str := strings.Join([]string{rev, entry.Op.String(), entry.Path, val}, FIELD_SEPARATOR)
+
+	payload = []byte(str)
+
+	return
+}
+
+func Unmarshal(payload []byte) (entry *JournalEntry, err error) {
+	l := strings.SplitN(string(payload), FIELD_SEPARATOR, 4)
+
+	rev, err := strconv.ParseInt(l[0], 10, 64)
+	if err != nil {
+		return
+	}
+
+	entry = NewEntry(rev, NewOperation(l[1]), l[2], []byte(l[3]))
 
 	return
 }
