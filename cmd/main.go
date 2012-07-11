@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/soundcloud/doozer"
+	"github.com/soundcloud/doozer-journal/journal"
 	"os"
 	"text/template"
 )
@@ -61,7 +62,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			rev, err := cmd.Conn.Rev()
+			rev, err := conn.Rev()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Unable to get revision: %s\n", err.Error())
 				os.Exit(1)
@@ -106,3 +107,27 @@ Globals:
 Commands:{{range .Commands}}
   {{.Name | printf "%-10s"}} {{.Desc}}{{end}}
 `
+
+func snapshot(conn *doozer.Conn, rev int64, j *journal.Journal) (err error) {
+	err = doozer.Walk(conn, rev, "/", func(p string, i *doozer.FileInfo, e error) (err error) {
+		if e != nil {
+			return fmt.Errorf("Error walking tree: %s\n", e.Error())
+		}
+
+		if !i.IsDir {
+			val, _, err := conn.Get(p, &rev)
+			if err != nil {
+				return fmt.Errorf("Error getting value for '%s': %s\n", p, err.Error())
+			}
+
+			e = j.Append(journal.NewEntry(i.Rev, journal.OpSet, p, val))
+			if e != nil {
+				return e
+			}
+		}
+
+		return
+	})
+
+	return
+}

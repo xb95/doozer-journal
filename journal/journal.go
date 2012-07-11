@@ -23,17 +23,17 @@ const ENTRY_END = "\n"
 // FIELD_SEPARATOR is the delimiter used to separate fields inside of an entry.
 const FIELD_SEPARATOR string = "|"
 
-// JournalEntry represents a journal log entry.
-type JournalEntry struct {
+// Entry represents a journal log entry.
+type Entry struct {
 	Rev   int64
 	Op    Operation
 	Path  string
 	Value []byte
 }
 
-// NewEntry returns a JournalEntry instance.
-func NewEntry(r int64, op Operation, p string, v []byte) (entry *JournalEntry) {
-	return &JournalEntry{Rev: r, Op: op, Path: p, Value: v}
+// NewEntry returns a Entry instance.
+func NewEntry(r int64, op Operation, p string, v []byte) (entry *Entry) {
+	return &Entry{Rev: r, Op: op, Path: p, Value: v}
 }
 
 // Journal represents an append-only log which accepts an either writable or readable
@@ -54,8 +54,8 @@ func New(logfile *os.File) (j *Journal) {
 	return
 }
 
-// Append writes a JournalEntry to the end of the journal log.
-func (j *Journal) Append(entry *JournalEntry) (err error) {
+// Append writes a Entry to the end of the journal log.
+func (j *Journal) Append(entry *Entry) (err error) {
 	if !strings.HasPrefix(entry.Path, INTERNAL_PREFIX) {
 		var payload []byte
 
@@ -115,7 +115,7 @@ func NewReader(j *Journal) (r *Reader) {
 	return
 }
 
-func (r *Reader) ReadEntry() (entry *JournalEntry, err error) {
+func (r *Reader) ReadEntry() (entry *Entry, err error) {
 	l := make([]byte, 8, 8)
 	n, err := r.file.ReadAt(l, r.offset)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *Reader) ReadEntry() (entry *JournalEntry, err error) {
 	return
 }
 
-func Marshal(entry *JournalEntry) (payload []byte, err error) {
+func Marshal(entry *Entry) (payload []byte, err error) {
 	rev := strconv.FormatInt(entry.Rev, 10)
 	val := string(entry.Value)
 	str := strings.Join([]string{rev, entry.Op.String(), entry.Path, val}, FIELD_SEPARATOR)
@@ -179,7 +179,7 @@ func Marshal(entry *JournalEntry) (payload []byte, err error) {
 	return
 }
 
-func Unmarshal(payload []byte) (entry *JournalEntry, err error) {
+func Unmarshal(payload []byte) (entry *Entry, err error) {
 	l := strings.SplitN(string(payload), FIELD_SEPARATOR, 4)
 
 	rev, err := strconv.ParseInt(l[0], 10, 64)

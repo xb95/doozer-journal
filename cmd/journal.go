@@ -35,13 +35,11 @@ func runJournal(cmd *Command, args []string) {
 	}
 
 	j := journal.New(f)
-
-	entries := make(chan coordinator.Entry, 1024)
-	errChan := make(chan error)
-
-	go coordinator.Walk(cmd.Conn, cmd.Rev, entries, errChan)
-
-	entryHandler(j, entries, errChan)
+	err = snapshot(cmd.Conn, cmd.Rev, j)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		os.Exit(1)
+	}
 
 	err = j.Sync()
 	if err != nil {
@@ -49,8 +47,8 @@ func runJournal(cmd *Command, args []string) {
 		os.Exit(1)
 	}
 
-	entries = make(chan coordinator.Entry, 1024)
-	errChan = make(chan error)
+	entries := make(chan coordinator.Entry, 1024)
+	errChan := make(chan error)
 
 	go coordinator.Watch(cmd.Conn, cmd.Rev, entries, errChan)
 
@@ -65,7 +63,7 @@ func entryHandler(j *journal.Journal, entries chan coordinator.Entry, errChan ch
 				return
 			}
 
-			var entry *journal.JournalEntry
+			var entry *journal.Entry
 			if e.IsSet {
 				entry = journal.NewEntry(e.Rev, journal.OpSet, e.Path, e.Value)
 			} else {

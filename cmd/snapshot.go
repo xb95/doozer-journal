@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/soundcloud/doozer-journal/coordinator"
 	"github.com/soundcloud/doozer-journal/journal"
 	"os"
 )
@@ -35,30 +34,10 @@ func runSnapshot(cmd *Command, args []string) {
 	}
 
 	j := journal.New(f)
-
-	entries := make(chan coordinator.Entry, 1024)
-	errChan := make(chan error)
-
-	go coordinator.Walk(cmd.Conn, cmd.Rev, entries, errChan)
-
-	for {
-		select {
-		case e, ok := <-entries:
-			if !ok {
-				break
-			}
-
-			err = j.Append(journal.NewEntry(e.Rev, journal.OpSet, e.Path, e.Value))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				os.Exit(1)
-			}
-		case err = <-errChan:
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				os.Exit(1)
-			}
-		}
+	err = snapshot(cmd.Conn, cmd.Rev, j)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		os.Exit(1)
 	}
 
 	err = j.Sync()
