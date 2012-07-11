@@ -13,7 +13,7 @@ build:
 	ln -sfn $${PWD} $(LOCAL_GOPATH)/src/$(PKG)
 	cd $(LOCAL_GOPATH)/src/$(PKG);\
 		GOPATH=$(LOCAL_GOPATH) go get -d ./...;\
-		GOPATH=$(LOCAL_GOPATH) go build -o doozer-journal ./cmd
+		GOPATH=$(LOCAL_GOPATH) go build
 
 fmt:
 	go fmt ./...
