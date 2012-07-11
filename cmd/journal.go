@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/soundcloud/doozer-journal/coordinator"
 	"github.com/soundcloud/doozer-journal/journal"
 	"os"
 )
@@ -47,45 +46,35 @@ func runJournal(cmd *Command, args []string) {
 		os.Exit(1)
 	}
 
-	entries := make(chan coordinator.Entry, 1024)
-	errChan := make(chan error)
-
-	go coordinator.Watch(cmd.Conn, cmd.Rev, entries, errChan)
-
-	entryHandler(j, entries, errChan)
-}
-
-func entryHandler(j *journal.Journal, entries chan coordinator.Entry, errChan chan error) {
+	rev := cmd.Rev
 	for {
-		select {
-		case e, ok := <-entries:
-			if !ok {
-				return
-			}
-
-			var entry *journal.Entry
-			if e.IsSet {
-				entry = journal.NewEntry(e.Rev, journal.OpSet, e.Path, e.Value)
-			} else {
-				entry = journal.NewEntry(e.Rev, journal.OpDel, e.Path, []byte{})
-			}
-
-			err := j.Append(entry)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				os.Exit(1)
-			}
-			b, err := journal.Marshal(entry)
-			if err != nil {
-				return
-			}
-
-			fmt.Fprintf(os.Stdout, "%s\n", string(b))
-		case err := <-errChan:
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				os.Exit(1)
-			}
+		ev, err := cmd.Conn.Wait("/**", rev+1)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to wait on event: %s\n", err.Error())
+			os.Exit(1)
 		}
+
+		var entry *journal.Entry
+		if ev.IsSet() {
+			entry = journal.NewEntry(ev.Rev, journal.OpSet, ev.Path, ev.Body)
+		} else {
+			entry = journal.NewEntry(ev.Rev, journal.OpDel, ev.Path, []byte{})
+		}
+
+		err = j.Append(entry)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+		b, err := journal.Marshal(entry)
+		if err != nil {
+			return
+		}
+
+		fmt.Fprintf(os.Stdout, "%s\n", string(b))
+
+		rev = ev.Rev
 	}
+
 }
