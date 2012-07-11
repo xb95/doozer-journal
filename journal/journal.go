@@ -46,8 +46,8 @@ type Journal struct {
 }
 
 // New returns a Journal instance with sane sync defaults.
-func New(logfile *os.File) (j Journal) {
-	j = Journal{logfile, 10 * time.Second, 100, 0}
+func New(logfile *os.File) (j *Journal) {
+	j = &Journal{logfile, 10 * time.Second, 100, 0}
 
 	go j.syncLoop()
 
@@ -104,18 +104,18 @@ func (j *Journal) syncLoop() {
 	}
 }
 
-type EntryReader struct {
+type Reader struct {
 	file   *os.File
 	offset int64
 }
 
-func (j *Journal) NewReader() (r *EntryReader) {
-	r = &EntryReader{file: j.File}
+func NewReader(j *Journal) (r *Reader) {
+	r = &Reader{file: j.File}
 
 	return
 }
 
-func (r *EntryReader) ReadEntry() (entry *JournalEntry, err error) {
+func (r *Reader) ReadEntry() (entry *JournalEntry, err error) {
 	l := make([]byte, 8, 8)
 	n, err := r.file.ReadAt(l, r.offset)
 	if err != nil {

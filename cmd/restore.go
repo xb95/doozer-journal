@@ -30,7 +30,7 @@ func runRestore(cmd *Command, args []string) {
 	}
 
 	j := journal.New(f)
-	r := j.NewReader()
+	r := journal.NewReader(j)
 
 	for {
 		entry, err := r.ReadEntry()
