@@ -3,7 +3,6 @@ unexport GIT_DIR # Needs to be unset for a clean build of external dependencies
 include go.mk
 PKG=github.com/soundcloud/doozer-journal
 
-
 clean:
 	go clean
 
@@ -24,7 +23,7 @@ RELEASE=$$(cat .release 2>/dev/null || echo "0")
 
 package:
 	- mkdir -p $(FAKEROOT)/usr/bin
-	cp doozer-journal $(FAKEROOT)/usr/bin
+	cp bin/* $(FAKEROOT)/usr/bin
 	- mkdir -p $(FAKEROOT)/var/lib/doozer-journal/
 	rm -rf *.deb
 
