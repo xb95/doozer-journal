@@ -1,14 +1,8 @@
 unexport GIT_DIR # Needs to be unset for a clean build of external dependencies
 
-LOCAL_GOPATH=${PWD}/.go_path
+include go.mk
 PKG=github.com/soundcloud/doozer-journal
 
-bundle: fmt
-	mkdir -p $$(dirname $(LOCAL_GOPATH)/src/$(PKG))
-	ln -sfn $${PWD} $(LOCAL_GOPATH)/src/$(PKG)
-	cd $(LOCAL_GOPATH)/src/$(PKG);\
-		GOPATH=$(LOCAL_GOPATH) go get -v -d ./...;\
-		GOPATH=$(LOCAL_GOPATH) go build
 
 clean:
 	go clean
