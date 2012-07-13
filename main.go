@@ -151,3 +151,11 @@ func exitWithError(msg string, vargs ...interface{}) {
 
 	os.Exit(1)
 }
+
+func logInfo(msg string, vargs ...interface{}) {
+	if log != nil {
+		log.Info(msg, vargs...)
+	} else {
+		fmt.Fprintf(os.Stdout, msg, vargs...)
+	}
+}

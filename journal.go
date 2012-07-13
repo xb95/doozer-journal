@@ -66,7 +66,7 @@ func runJournal(cmd *Command, args []string) {
 			return
 		}
 
-		fmt.Fprintf(os.Stdout, "%s\n", string(b))
+    logInfo("%s\n", string(b))
 
 		rev = ev.Rev
 	}
