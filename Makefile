@@ -6,7 +6,6 @@ PKG=github.com/soundcloud/doozer-journal
 
 clean:
 	go clean
-	git clean -fdx
 
 # The default bazooka target
 build: bundle package
