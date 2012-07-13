@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/soundcloud/doozer-journal/journal"
 	"os"
+	"strings"
 )
 
 var cmdJournal = &Command{
@@ -65,7 +66,9 @@ func runJournal(cmd *Command, args []string) {
 			return
 		}
 
-    logInfo("%s\n", string(b))
+		if !strings.HasPrefix(ev.Path, journal.INTERNAL_PREFIX) {
+			logInfo("%s\n", string(b))
+		}
 
 		rev = ev.Rev
 	}
