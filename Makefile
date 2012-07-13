@@ -12,7 +12,7 @@ build:
 	mkdir -p $$(dirname $(LOCAL_GOPATH)/src/$(PKG))
 	ln -sfn $${PWD} $(LOCAL_GOPATH)/src/$(PKG)
 	cd $(LOCAL_GOPATH)/src/$(PKG);\
-		GOPATH=$(LOCAL_GOPATH) go get -d ./...;\
+		GOPATH=$(LOCAL_GOPATH) go get -v -d ./...;\
 		GOPATH=$(LOCAL_GOPATH) go build
 
 fmt:

@@ -25,33 +25,28 @@ func runJournal(cmd *Command, args []string) {
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_EXCL|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		if os.IsExist(err) {
-			fmt.Fprintf(os.Stderr, "Journal already exists at %s\n", file)
+			exitWithError("Journal already exists at %s\n", file)
 		} else {
-			fmt.Fprintf(os.Stderr, "Unable to open journal: %s\n", err.Error())
+			exitWithError("Unable to open journal: %s\n", err)
 		}
-
-		os.Exit(1)
 	}
 
 	j := journal.New(f)
 	err = snapshot(cmd.Conn, cmd.Rev, j)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-		os.Exit(1)
+		exitWithError("%s\n", err)
 	}
 
 	err = j.Sync()
 	if err != nil {
-		fmt.Fprint(os.Stderr, "%s\n", err.Error())
-		os.Exit(1)
+		exitWithError("%s\n", err)
 	}
 
 	rev := cmd.Rev
 	for {
 		ev, err := cmd.Conn.Wait("/**", rev+1)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to wait on event: %s\n", err.Error())
-			os.Exit(1)
+			exitWithError("Unable to wait on event: %s\n", err)
 		}
 
 		var entry *journal.Entry
@@ -63,8 +58,7 @@ func runJournal(cmd *Command, args []string) {
 
 		err = j.Append(entry)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			os.Exit(1)
+			exitWithError("%s\n", err)
 		}
 
 		b, err := journal.Marshal(entry)
@@ -76,5 +70,4 @@ func runJournal(cmd *Command, args []string) {
 
 		rev = ev.Rev
 	}
-
 }
