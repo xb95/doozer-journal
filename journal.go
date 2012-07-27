@@ -49,11 +49,16 @@ func runJournal(cmd *Command, args []string) {
 			exitWithError("Unable to wait on event: %s\n", err)
 		}
 
+		// Advance in time!
+		rev = ev.Rev
+
 		var entry *journal.Entry
 		if ev.IsSet() {
 			entry = journal.NewEntry(ev.Rev, journal.OpSet, ev.Path, ev.Body)
-		} else {
+		} else if ev.IsDel() {
 			entry = journal.NewEntry(ev.Rev, journal.OpDel, ev.Path, []byte{})
+		} else {
+			continue
 		}
 
 		err = j.Append(entry)
@@ -70,6 +75,5 @@ func runJournal(cmd *Command, args []string) {
 			logInfo("%s\n", string(b))
 		}
 
-		rev = ev.Rev
 	}
 }
