@@ -39,6 +39,7 @@ var (
 	log    *logorithm.L
 	uri    string
 	syslog bool
+	root   string
 )
 
 var commands = []*Command{
@@ -53,6 +54,7 @@ func init() {
 	flag.BoolVar(&syslog, "l", false, "syslog compliant logging")
 	flag.StringVar(&file, "file", "./doozerd.log", "location of the journal file")
 	flag.StringVar(&uri, "uri", "doozer:?ca=localhost:8046", "doozerd cluster uri")
+	flag.StringVar(&root, "root", "/", "root to operate from")
 	flag.Parse()
 
 	if syslog {
@@ -100,7 +102,7 @@ func usage() {
 		Globals  map[string]string
 	}{
 		commands,
-		map[string]string{"file": file, "uri": uri},
+		map[string]string{"file": file, "uri": uri, "root": root},
 	}
 
 	if err := t.Execute(os.Stderr, data); err != nil {
@@ -113,13 +115,14 @@ var usageTmpl = `Usage: doozer-journal [globals] command
 Globals:
   -file   location of backup file ({{.Globals.file}})
   -uri    doozerd cluster URI     ({{.Globals.uri}})
+  -root   base to operate on      ({{.Globals.root}})
 
 Commands:{{range .Commands}}
   {{.Name | printf "%-10s"}} {{.Desc}}{{end}}
 `
 
 func snapshot(conn *doozer.Conn, rev int64, j *journal.Journal) (err error) {
-	err = doozer.Walk(conn, rev, "/", func(p string, i *doozer.FileInfo, e error) (err error) {
+	err = doozer.Walk(conn, rev, root, func(p string, i *doozer.FileInfo, e error) (err error) {
 		if e != nil {
 			return fmt.Errorf("Error walking tree: %s\n", e.Error())
 		}

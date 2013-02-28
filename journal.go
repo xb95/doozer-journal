@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/soundcloud/doozer-journal/journal"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -42,9 +43,11 @@ func runJournal(cmd *Command, args []string) {
 		exitWithError("%s\n", err)
 	}
 
+	watchroot := path.Join(root, "**")
+
 	rev := cmd.Rev
 	for {
-		ev, err := cmd.Conn.Wait("/**", rev+1)
+		ev, err := cmd.Conn.Wait(watchroot, rev+1)
 		if err != nil {
 			exitWithError("Unable to wait on event: %s\n", err)
 		}
